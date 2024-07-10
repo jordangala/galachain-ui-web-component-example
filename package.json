@@ -1,0 +1,22 @@
+{
+  "name": "wc-001",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node watch.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@gala-chain/connect": "^1.2.2",
+    "@jordangala/galachain-ui": "^0.0.6",
+    "typescript": "^5.5.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "esbuild-copy-static-files": "^0.1.0"
+  }
+}
