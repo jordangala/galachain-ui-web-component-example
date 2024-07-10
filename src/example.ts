@@ -36,7 +36,10 @@ const TODO_UnneededTransferTokenRequestParams = {
 // Force esbuild to bundle GalaTransferToken web component
 new GalaTransferToken();
 
-const waitUntil = (selector: string, fn: Function) => {
+// --
+// Helper function to wait for an element to be loaded
+
+const waitUntil = (selector: string, fn: (element: Element) => void) => {
   const element = document.querySelector(selector);
 
   if (element) {
@@ -45,6 +48,10 @@ const waitUntil = (selector: string, fn: Function) => {
     setTimeout(() => waitUntil(selector, fn), 100);
   }
 };
+
+// --
+// Wait for transfer-token web component to be loaded, then initialize the client,
+// and attach event listeners to the transfer-token web component
 
 waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferToken) => {
   const connectClient = new GalachainConnectClient(gatewayUri);
