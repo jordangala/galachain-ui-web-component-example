@@ -1,36 +1,24 @@
-import { GalachainConnectClient, TokenClient } from '@gala-chain/connect';
+import {
+  getChecksumEthereumWalletAddress,
+  getEthereumWalletAddress,
+  getGalaChainAddress,
+  getPrefixedRequestBody,
+  getRequestBodySignature,
+  getSignedPrefixedRequestBody,
+  isGalaChainClientAddress,
+  isGalaChainEthereumAddress,
+  makeChainMethods,
+  PrefixedRequestBody,
+} from '@jordangala/galachain-access';
 import { GalaTransferToken } from '@jordangala/galachain-ui';
 
-// --
-// Config
-
-const gatewayUri = 'http://localhost:3002/api/asset/token-contract';
+const chainBaseUri = 'http://localhost:3002/api';
 
 const tokenClassKey = {
-  collection: 'LastExpedition',
+  collection: 'GALA',
   category: 'Unit',
-  type: 'LEMinerals',
+  type: 'none',
   additionalKey: 'none',
-};
-
-// const tokenClassKey = {
-//   collection: 'GALA',
-//   category: 'Unit',
-//   type: 'none',
-//   additionalKey: 'none',
-// };
-
-// --
-// TODO
-type TODO = any;
-
-const TODO_UnneededTransferTokenRequestParams = {
-  validate: undefined as TODO,
-  validateOrReject: undefined as TODO,
-  serialize: undefined as TODO,
-  sign: undefined as TODO,
-  signed: undefined as TODO,
-  isSignatureValid: undefined as TODO,
 };
 
 // Force esbuild to bundle GalaTransferToken web component
@@ -54,21 +42,32 @@ const waitUntil = (selector: string, fn: (element: Element) => void) => {
 // and attach event listeners to the transfer-token web component
 
 waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferToken) => {
-  const connectClient = new GalachainConnectClient(gatewayUri);
+  const chainMethods = makeChainMethods(chainBaseUri);
 
-  await connectClient.connectToMetaMask();
-  // const address = connectClient.address;
-  const address = 'client|6617fdcffbe793ab3db0594d';
+  const ethereumWalletAddress = await getEthereumWalletAddress();
 
-  const tokenClient = new TokenClient(connectClient);
+  if (!ethereumWalletAddress) {
+    return;
+  }
 
-  console.log('👉 Using address', address);
+  const checksumEthereumWalletAddress = getChecksumEthereumWalletAddress(ethereumWalletAddress);
 
-  const submit = async (element: Element, method: string, payload: Object) => {
+  const getRequestBodySignatureFn = <TRequestBody>(prefixedRequestBody: PrefixedRequestBody<TRequestBody>) =>
+    getRequestBodySignature({
+      checksumEthereumWalletAddress,
+      prefixedRequestBody,
+    });
+
+  const owner = getGalaChainAddress(checksumEthereumWalletAddress);
+  if (!owner) {
+    return;
+  }
+
+  const submit = async (element: Element, fn: () => Promise<any>) => {
     element.setAttribute('loading', 'true');
 
     try {
-      const response = await (tokenClient as TODO)[method](payload);
+      const response = await fn();
       if (response.ErrorCode) {
         throw new Error(response.Message);
       }
@@ -98,10 +97,23 @@ waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferTok
   transferTokenElement.addEventListener('submit', async (event: any) => {
     const galaTransferToken = document.getElementById('transfer-token') as typeof GalaTransferToken;
 
-    const payload = event.detail[0];
-    const response = await submit(galaTransferToken, 'TransferToken', {
-      ...payload,
-      uniqueKey: 'my-unique-key',
+    // const payload = event.detail[0];
+
+    console.log('event.detail', event.detail);
+
+    const response = await submit(galaTransferToken, async () => {
+      const requestBody = event.detail[0];
+
+      if (!isGalaChainClientAddress(requestBody.to) && !isGalaChainEthereumAddress(requestBody.from)) {
+        alert('Invalid to address');
+      }
+
+      return chainMethods.transferToken(
+        await getSignedPrefixedRequestBody({
+          getRequestBodySignatureFn,
+          prefixedRequestBody: getPrefixedRequestBody(requestBody),
+        }),
+      );
     });
 
     alert(JSON.stringify(response));
@@ -113,13 +125,16 @@ waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferTok
     alert(JSON.stringify(payload));
   });
 
-  const balancesResponse = await tokenClient.FetchBalances({
-    owner: address,
-    ...tokenClassKey,
-    ...TODO_UnneededTransferTokenRequestParams,
+  const balancesResponse = await chainMethods.fetchBalances({
+    owner,
+    collection: 'GALA',
   });
 
-  const balance = balancesResponse.Data[0];
+  if (!balancesResponse.response) {
+    return;
+  }
+
+  const balance = balancesResponse.response.body.Data[0];
 
   console.log('👉 Using balance', balance);
 
