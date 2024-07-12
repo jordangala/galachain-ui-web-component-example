@@ -1,15 +1,4 @@
-import {
-  getChecksumEthereumWalletAddress,
-  getEthereumWalletAddress,
-  getGalaChainAddress,
-  getPrefixedRequestBody,
-  getRequestBodySignature,
-  getSignedPrefixedRequestBody,
-  isGalaChainClientAddress,
-  isGalaChainEthereumAddress,
-  makeChainMethods,
-  PrefixedRequestBody,
-} from '@jordangala/galachain-access';
+import * as GalaChainAccess from '@jordangala/galachain-access';
 import { GalaTransferToken } from '@jordangala/galachain-ui';
 
 const chainBaseUri = 'http://localhost:3002/api';
@@ -42,23 +31,18 @@ const waitUntil = (selector: string, fn: (element: Element) => void) => {
 // and attach event listeners to the transfer-token web component
 
 waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferToken) => {
-  const chainMethods = makeChainMethods(chainBaseUri);
+  const chainMethods = GalaChainAccess.getChainMethods({
+    chainBaseUri,
+    signRequestBodyFn: GalaChainAccess.getSignRequestBodyWithPersonalSignPrefixFn(),
+  });
 
-  const ethereumWalletAddress = await getEthereumWalletAddress();
+  const ethereumWalletAddress = await GalaChainAccess.getEthereumWalletAddress();
 
   if (!ethereumWalletAddress) {
     return;
   }
 
-  const checksumEthereumWalletAddress = getChecksumEthereumWalletAddress(ethereumWalletAddress);
-
-  const getRequestBodySignatureFn = <TRequestBody>(prefixedRequestBody: PrefixedRequestBody<TRequestBody>) =>
-    getRequestBodySignature({
-      checksumEthereumWalletAddress,
-      prefixedRequestBody,
-    });
-
-  const owner = getGalaChainAddress(checksumEthereumWalletAddress);
+  const owner = GalaChainAccess.getGalaChainAddress(ethereumWalletAddress);
   if (!owner) {
     return;
   }
@@ -104,16 +88,11 @@ waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferTok
     const response = await submit(galaTransferToken, async () => {
       const requestBody = event.detail[0];
 
-      if (!isGalaChainClientAddress(requestBody.to) && !isGalaChainEthereumAddress(requestBody.from)) {
+      if (!GalaChainAccess.isGalaChainClientAddress(requestBody.to)) {
         alert('Invalid to address');
       }
 
-      return chainMethods.transferToken(
-        await getSignedPrefixedRequestBody({
-          getRequestBodySignatureFn,
-          prefixedRequestBody: getPrefixedRequestBody(requestBody),
-        }),
-      );
+      return chainMethods.transferToken(requestBody);
     });
 
     alert(JSON.stringify(response));
@@ -130,7 +109,7 @@ waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferTok
     collection: 'GALA',
   });
 
-  if (!balancesResponse.response) {
+  if ('exception' in balancesResponse) {
     return;
   }
 
