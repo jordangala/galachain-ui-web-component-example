@@ -36,7 +36,7 @@ waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferTok
     signRequestBodyFn: GalaChainAccess.getSignRequestBodyWithPersonalSignPrefixFn(),
   });
 
-  const ethereumWalletAddress = await GalaChainAccess.getEthereumWalletAddress();
+  const ethereumWalletAddress = await GalaChainAccess.getPersonalSignEthereumWalletAddress();
 
   if (!ethereumWalletAddress) {
     return;
@@ -88,7 +88,7 @@ waitUntil('#transfer-token', async (transferTokenElement: typeof GalaTransferTok
     const response = await submit(galaTransferToken, async () => {
       const requestBody = event.detail[0];
 
-      if (!GalaChainAccess.isGalaChainClientAddress(requestBody.to)) {
+      if (!GalaChainAccess.isGalaChainAddress(requestBody.to)) {
         alert('Invalid to address');
       }
 
