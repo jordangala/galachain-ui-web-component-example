@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@gala-chain/connect": "^1.2.2",
+    "@jordangala/galachain-access": "^0.0.5",
     "@jordangala/galachain-ui": "^0.0.6",
     "typescript": "^5.5.3"
   },
